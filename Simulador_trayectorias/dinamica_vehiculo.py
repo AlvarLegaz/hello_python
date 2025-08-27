@@ -1,96 +1,75 @@
 """
-dinamica_vehiculo.py
-Dinámica traslacional 2D (plano x–z, z hacia arriba) de un cohete.
+Modulo: dinamica_vehiculo.py
+Descripción: Dinámica traslacional 2D (plano x–z, z hacia arriba) de un cohete.
 Unidades: SI
+
+Autor: Álvar Ginés Legaz Aparicio
 """
 
 import math
 import fuerzas_aerodinamicas as fa  # requiere: g(h), empuje(...), arrastre(...)
 
-# ------------------------------------------------------------
-# Masa instantánea (consumo lineal medio)
-# ------------------------------------------------------------
-def masa_instantanea(veh: dict, t: float) -> float:
-    """
-    veh: dict con claves:
-        'm_seco' [kg], 'm_prop' [kg], 'tiempo_quemado' [s]
-    """
-    t = max(0.0, float(t))
-    m_prop0 = float(veh["m_prop"])
-    tburn   = float(veh["tiempo_quemado"])
-    mdot    = (m_prop0 / tburn) if tburn > 0.0 else 0.0
-    m_prop  = max(m_prop0 - mdot * t, 0.0)
-    return float(veh["m_seco"]) + m_prop
+class Vehiculo:
 
-# ------------------------------------------------------------
-# Dinámica (fuerzas → aceleraciones)
-# ------------------------------------------------------------
-def dinamica_vehiculo(pitch: float,
-                      porcentaje_empuje: float,
-                      estado: dict,
-                      veh: dict,
-                      Cd_val: float | None = None) -> dict:
-    """
-    Entradas:
-      - pitch: ángulo del vehículo [rad] (≈ gamma si no modelas AoA)
-      - porcentaje_empuje: factor 0..1
-      - estado: dict {'t':[s], 'altitud':[m], 'velocidad':[m/s]}
-      - veh: dict {
-            'm_seco':[kg], 'm_prop':[kg], 'Aref':[m^2],
-            'empuje_vacio':[N], 'empuje_nivel_mar':[N], 'tiempo_quemado':[s]
-        }
-      - Cd_val: opcional; si se da, se usa ese Cd en el cálculo de D.
-
-    Devuelve dict con:
-      {'ax','az','T','D','m','g','Vx','Vz','gamma'}
-    """
-    # Estado
-    t = float(estado["t"])
-    h = max(0.0, float(estado["altitud"]))
-    V = max(0.0, float(estado["velocidad"]))
-
-    # Masa y gravedad
-    m = max(masa_instantanea(veh, t), 1e-9)  # evita división por cero
-    g = fa.gravedad(h)
-
-    # Throttle robusto
-    thr = min(1.0, max(0.0, float(porcentaje_empuje)))
-
-    # Empuje (con corrección por presión ambiente implementada en fa.empuje)
-    T = fa.empuje(
-        float(veh["empuje_vacio"]),
-        float(veh["empuje_nivel_mar"]),
-        float(veh["tiempo_quemado"]),
-        thr,
-        h,
-        t
-    )
+    def __init__(self, datos_vehiculo):
+        self.empuje_vacio = float(datos_vehiculo["empuje_vacio"])
+        self.empuje_nivel_mar= float(datos_vehiculo["empuje_nivel_mar"])
+        self.tiempo_quemado = float(datos_vehiculo["tiempo_quemado"])
+        self.area_efectiva = float(datos_vehiculo["Aref"])
+        self.m_seco = float(datos_vehiculo["m_seco"])
+        self.m_prop = float(datos_vehiculo["m_prop"])
 
 
-    D = fa.arrastre(h, V, area_efectiva=float(veh["Aref"]))
+    # ------------------------------------------------------------
+    # Dinámica (fuerzas → aceleraciones)
+    # Control del vehículo a trevés de pitch y procentaje_empuje
+    # Posicion actual
+    # ------------------------------------------------------------
+    def dinamica_vehiculo(self, pitch: float, porcentaje_empuje: float, estado: dict):
+        # Control del vehículo con ángulo de trayectoria (≈ actitud) y porcentaje empuje
+        thr =  max(0.0, float(porcentaje_empuje))
+        gamma = float(pitch)
 
-    # Ángulo de trayectoria (≈ actitud)
-    gamma = float(pitch)
+        # Estado actual
+        t = float(estado["t"])
+        h = max(0.0, float(estado["altitud"]))
+        Vz = max(0.0, float(estado["Vz"]))
+        Vx = max(0.0, float(estado["Vx"]))
+        V = math.sqrt(Vx**2 + Vz**2)
 
-    # Componentes de velocidad
-    Vx = V * math.cos(gamma)
-    Vz = V * math.sin(gamma)
+        # Empuje (con corrección por presión ambiente implementada en fa.empuje)
+        T = fa.empuje(self.empuje_vacio, self.empuje_nivel_mar, self.tiempo_quemado, thr, h, t)
+      
+        # Peso y masa
+        m = max(self.masa_instantanea(t), 1e-9)  # evita división por cero
+        W= fa.peso(h, m)
 
-    # Proyección del arrastre opuesta a V
-    if V > 1e-9:
-        invV = 1.0 / V
-        Dx = D * (Vx * invV)
-        Dz = D * (Vz * invV)
-    else:
-        Dx = 0.0
-        Dz = 0.0
+        # Arrastre (con corrección por presión ambiente implementada en fa.empuje)
+        if V > 1e-9:
+            invV = 1.0 / V
+            Dx = fa.arrastre_x(h, Vx, V, self.area_efectiva)
+            Dz = fa.arrastre_z(h, Vz, V, self.area_efectiva)
+        else:
+            Dx = 0.0
+            Dz = 0.0
 
-    # Ecuaciones de movimiento (traslación)
-    ax = (T * math.cos(gamma) - Dx) / m
-    az = (T * math.sin(gamma) - Dz - m * g) / m
+        # Ecuaciones de movimiento (traslación)
+        ax = (T * math.cos(gamma) - Dx) / m
+        az = (T * math.sin(gamma) - Dz - W) / m
 
-    return {
-        "ax": ax, "az": az,
-        "T": T, "D": D, "m": m, "g": g,
-        "Vx": Vx, "Vz": Vz, "gamma": gamma
-    }
+        return {"ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "gamma": gamma}
+
+    # ------------------------------------------------------------
+    # Masa instantánea (consumo lineal medio)
+    # ------------------------------------------------------------
+    def masa_instantanea(self, t: float) -> float:
+        """
+        veh: dict con claves:
+            'm_seco' [kg], 'm_prop' [kg], 'tiempo_quemado' [s]
+        """
+        t = max(0.0, float(t))
+        m_prop0 = self.m_prop
+        tburn   = self.tiempo_quemado
+        mdot    = (m_prop0 / tburn) if tburn > 0.0 else 0.0
+        m_prop  = max(m_prop0 - mdot * t, 0.0)
+        return self.m_seco + m_prop
