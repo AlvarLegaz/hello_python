@@ -10,17 +10,11 @@ import math
 import fuerzas_aerodinamicas as fa
 import vehiculo as dv
 import matplotlib.pyplot as plt  # <-- para la gráfica
+from datos_vehiculos import VEHICULOS
 
 class Escenario:
-    def __init__(self):
-        self.veh = {
-            "m_seco": 1000.0,                 # kg
-            "m_prop": 1600.0,                # kg
-            "Aref": math.pi * (0.4**2),     # m^2 (Ø=10 m)
-            "empuje_vacio": 30_000.0,       # N
-            "empuje_nivel_mar": 30_000.0,   # N
-            "tiempo_quemado": 90.0          # s
-        }
+    def __init__(self, nombre_vehiculo="falcon9"):
+        self.veh = VEHICULOS[nombre_vehiculo]  # carga el diccionario del vehículo elegido
 
         # -------------------------------
         # Estado inicial
@@ -41,15 +35,6 @@ class Escenario:
         self.vehiculo = dv.Vehiculo(self.veh)
 
     def reset(self):
-        self.veh = {
-            "m_seco": 1000.0,                 # kg
-            "m_prop": 1600.0,                # kg
-            "Aref": math.pi * (0.4**2),     # m^2 (Ø=10 m)
-            "empuje_vacio": 30_000.0,       # N
-            "empuje_nivel_mar": 30_000.0,   # N
-            "tiempo_quemado": 90.0          # s
-        }
-
         # -------------------------------
         # Estado inicial
         # -------------------------------
