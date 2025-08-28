@@ -4,7 +4,7 @@
 
 import math
 import fuerzas_aerodinamicas as fa
-import dinamica_vehiculo as dv
+import vehiculo as dv
 import matplotlib.pyplot as plt  # <-- para la gráfica
 
 # -------------------------------
