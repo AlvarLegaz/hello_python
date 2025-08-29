@@ -21,7 +21,7 @@ class App:
 
         self.root = root
         self.root.title("Rotación del cohete")
-        self.root.geometry("1100x750")  # más alto para footer
+        self.root.geometry("1250x750")  # más alto para footer
 
         # ----- Layout principal: lateral izq + contenido + lateral dcha -----
         main = tk.Frame(root, bg="black")
@@ -34,25 +34,49 @@ class App:
 
         # Contenido central
         content = tk.Frame(main, bg="black")
-        content.pack(side="left", expand=True, fill="both")
+        content.pack(side="left", expand=True, fill="y")
 
         # Lateral derecho (telemetría)
         rightbar = tk.Frame(main, bg="#1e1e1e", width=220)
         rightbar.pack(side="right", fill="y")
         rightbar.pack_propagate(False)
 
-        # ---- Widgets contenido ----
-        self.lbl_img_pitch = tk.Label(content, bg="white")
-        self.lbl_img_pitch.pack(expand=True)
+        # ---- Widgets contenido (IMAGENES CENTRALES)----
 
+        self.lbl_img_mapa = tk.Label(content, bg="black")
+        self.lbl_img_mapa.grid(row=0, column=0, columnspan=3, sticky="nsew")  # ocupa 2 columnas
+
+        self.lbl_img_pitch = tk.Label(content, bg="black")
+        self.lbl_img_pitch.grid(row=1, column=0,  sticky="nsew")
+
+        self.lbl_img_brujula = tk.Label(content, bg="black")
+        self.lbl_img_brujula.grid(row=1, column=2, sticky="nsew")
+
+        # Labels de texto 
         self.lbl_angle = tk.Label(content, text="Pitch = 90°", font=("Arial", 14), bg="white")
-        self.lbl_angle.pack(side=tk.LEFT, padx=10)
-        
+        self.lbl_angle.grid(row=2, column=0, sticky="nsew")
+
         self.lbl_porcentaje_empuje = tk.Label(content, text="Empuje = 100%", font=("Arial", 14), bg="white")
-        self.lbl_porcentaje_empuje.pack(side=tk.LEFT, padx=10)
+        self.lbl_porcentaje_empuje.grid(row=2, column=1, sticky="nsew")
 
         self.lbl_time = tk.Label(content, text="Tiempo: 0 s", font=("Arial", 14), bg="white")
-        self.lbl_time.pack(pady=10)
+        self.lbl_time.grid(row=2, column=2, sticky="nsew")
+
+        # Configurar rejilla para que cada celda tenga tamaño fijo
+        content.grid_rowconfigure(0, minsize=400)  # fila mapa
+        content.grid_rowconfigure(1, minsize=200)  # fila brújula y extra
+        content.grid_rowconfigure(2, minsize=50)    # fila de labels de texto
+
+        content.grid_columnconfigure(0, minsize=50)
+        content.grid_columnconfigure(1, minsize=50)
+        content.grid_columnconfigure(2, minsize=50)
+
+        
+        self.img_mapa = self.cargar_imagen("mapa.png",800,400)
+        self.lbl_img_mapa.config(image=self.img_mapa)
+
+        self.img_brujula = self.cargar_imagen("brujula.png")
+        self.lbl_img_brujula.config(image=self.img_brujula)
 
         # ---- Widgets lateral izquierdo ----
         tk.Label(leftbar, text="Cohete", font=("Arial", 16, "bold"),
@@ -158,6 +182,13 @@ class App:
 
         self.tick()
 
+    # FUNCIONES PARA CARGAR IMAGENES Y REESCALARLAS
+        # Función para cargar y escalar imágenes
+    def cargar_imagen(self, ruta, ancho=IMG_SIZE, alto=IMG_SIZE):
+        img = Image.open(ruta)
+        img = img.resize((ancho, alto), Image.Resampling.LANCZOS)  # Redimensiona
+        return ImageTk.PhotoImage(img)
+    
     def _make_row(self, parent, label, var, bg="#232323"):
         row = tk.Frame(parent, bg=bg)
         tk.Label(row, text=label, font=("Arial", 13), fg="white", bg=bg).pack(side="left")
