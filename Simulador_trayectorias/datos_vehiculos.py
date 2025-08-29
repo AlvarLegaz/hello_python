@@ -32,5 +32,13 @@ VEHICULOS = {
         "empuje_vacio": 20_000.0,
         "empuje_nivel_mar": 19_000.0,
         "tiempo_quemado": 70.0
+    },
+    "testV": {
+        "m_seco": 800.0,
+        "m_prop": 1200.0,
+        "Aref": math.pi * (0.3**2),
+        "empuje_vacio": 25_000.0,
+        "empuje_nivel_mar": 25_000.0,
+        "tiempo_quemado": 10.0
     }
 }

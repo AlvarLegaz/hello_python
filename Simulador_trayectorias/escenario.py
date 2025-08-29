@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt  # <-- para la gráfica
 from datos_vehiculos import VEHICULOS
 
 class Escenario:
-    def __init__(self, nombre_vehiculo="falcon9"):
+    def __init__(self, nombre_vehiculo="testV"):
         self.veh = VEHICULOS[nombre_vehiculo]  # carga el diccionario del vehículo elegido
 
         # -------------------------------
@@ -34,6 +34,8 @@ class Escenario:
         
         self.vehiculo = dv.Vehiculo(self.veh)
 
+        self.historia =[]
+
     def reset(self):
         # -------------------------------
         # Estado inicial
@@ -51,15 +53,16 @@ class Escenario:
         self.vz = Vz
 
         self.vehiculo = dv.Vehiculo(self.veh)
+
+        self.historia =[]
     
     def update(self, pitch, porcentaje_empuje, dt):
 
         estado = {"t": self.t, "altitud": self.h, "Vz": self.vx, "Vx": self.vz}
         pitch = pitch
-        throttle = 100
 
         # Fuerzas/aceleraciones en estado actual
-        out = self.vehiculo.dinamica_vehiculo(pitch, throttle, estado)
+        out = self.vehiculo.dinamica_vehiculo(pitch, porcentaje_empuje, estado)
         ax = out["ax"]
         az = out["az"]
         T  = out["T"]
@@ -78,9 +81,11 @@ class Escenario:
         # -----------------------------
         # Eventos dentro del paso
         # -----------------------------
-
-        # 1) Impacto con suelo: cruza h=0 del lado positivo
-        if self.h > 0.0 and h_next <= 0.0:
+        # 1) Pasado en el suelo sin empuje
+        if self.h == 0 and h_next <= 0.0:
+            V  = math.hypot(self.vx, self.vz)
+        # 2) Impacto con suelo: cruza h=0 del lado positivo
+        elif self.h > 0.0 and h_next <= 0.0:
             V  = math.hypot(self.vx, self.vz)
             qi = fa.q(self.h, V)
             print(f"Impacto con el suelo en t={self.t:.2f} s")
@@ -92,7 +97,14 @@ class Escenario:
             self.h = h_next
             self.t = t_next 
         
-        return {"altitud":self.h, "distancia":self.xx, "vx":self.vx, "vz":self.vz, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m}
+        # Nivel combustible
+        fuel_var = self.vehiculo.porcentaje_combustible()
+
+        self.historia.append({"tiempo":self.t, "altitud":self.h, "distancia":self.xx, "vx":self.vx, "vz":self.vz, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var})
+        
+        return {"tiempo":self.t, "altitud":self.h, "distancia":self.xx, "vx":self.vx, "vz":self.vz, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var}
     
+    def obtener_datos_vuelo(self):
+        return self.historia
 
 

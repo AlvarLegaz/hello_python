@@ -16,9 +16,10 @@ p0 = 101325.0 # presión al nivel del mar [Pa]
 
 
 def empuje(empuje_vacio, empuje_nivel_mar, tiempo_quemado, procentaje_empuje, altitud, tiempo_vuelo):
-    Ae = (empuje_vacio - empuje_nivel_mar)/p0
+    empuje_nivel_mar_actual = (procentaje_empuje/100)*empuje_nivel_mar
+    #Ae = (empuje_vacio - empuje_nivel_mar)/p0
     if tiempo_vuelo < tiempo_quemado:
-        return empuje_nivel_mar
+        return empuje_nivel_mar_actual
     else:
         return 0
 
