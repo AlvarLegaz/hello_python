@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt  # <-- para la gráfica
 def mostrar_datos_trayectoria(historia):
     t = [r["tiempo"] for r in historia]
     T = [r["T"] for r in historia]
-    pitch = [math.degrees(r["pitch"]) for r in historia] 
+    pitch = [r["pitch"] for r in historia] 
     h = [r["altitud"] for r in historia]
     vz = [r["vz"] for r in historia]
     vx = [r["vx"] for r in historia]
@@ -23,7 +23,7 @@ def mostrar_datos_trayectoria(historia):
 
     axs[0, 1].plot(t, pitch, color="brown")
     axs[0, 1].set_title("Pitch vs. tiempo")
-    axs[0, 1].set_ylabel("Pitch [rad]")
+    axs[0, 1].set_ylabel("Pitch [º]")
     axs[0, 1].set_xlabel("Tiempo [s]")
     axs[0, 1].grid(True)
 

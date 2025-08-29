@@ -3,6 +3,7 @@ from tkinter import messagebox
 from PIL import Image, ImageTk, ImageOps, Image
 import time, math
 import escenario as esc
+import piloto_automatico as pa
 import datos_vuelo_gui as dvgui
 
 ROT_STEP_DEG = 5
@@ -14,13 +15,21 @@ class App:
     def __init__(self, root):
 
         self.mi_escenario = esc.Escenario()
-
+        self.mi_pilot_automatico = pa.PilotoAutomatico()
+        
+        # Poscion inicial
         self.altitud = 0
         self.distancia = 0
+        self.elapsed = 0
+        self.elapsed_ticks = 0
+
+        # Controles iniciales
         self.porcentaje_empuje = 100
+        self.pitch = 90
+        self.control_piloto_automatico = False
 
         self.root = root
-        self.root.title("Rotación del cohete")
+        self.root.title("Simulador Aeroespacial Simple")
         self.root.geometry("1250x750")  # más alto para footer
 
         # ----- Layout principal: lateral izq + contenido + lateral dcha -----
@@ -138,6 +147,19 @@ class App:
                              command=self.mostrar_datos_vuelo, bg="red", fg="white", width=20)
         btn_datos_vuelo.pack(side="left", padx=10, pady=10)
 
+         # Variable interna para el Checkbutton
+        self._var_piloto = tk.BooleanVar(value=False)
+
+        # Checkbutton enlazado a la variable interna
+        self.chk = tk.Checkbutton(
+            root,
+            text="Activar piloto automático",
+            variable=self._var_piloto,
+            command=self._actualizar_estado  # se ejecuta al marcar/desmarcar
+        )
+        self.chk.pack()
+
+
         # ---- Estado ----
         self.left_down = False
         self.right_down = False
@@ -195,7 +217,7 @@ class App:
         tk.Label(row, textvariable=var, font=("Arial", 13, "bold"), fg="white", bg=bg).pack(side="right")
         row.pack(fill="x", padx=16, pady=6)
 
-    # ---- Cronómetro ----
+    # ---- CONTROLES DE INICIO FIN Y PILOTO AUTOMATICO ----
     def start_timer(self):
         if not self.running:
             self.start_time = time.time()
@@ -213,6 +235,10 @@ class App:
         self.elapsed_before = 0
         self.lbl_time.configure(text="Tiempo: 0 s")
         self.mi_escenario.reset()
+
+    def _actualizar_estado(self):
+        """Sincroniza la variable interna con el atributo Python"""
+        self.control_piloto_automatico = self._var_piloto.get()    
 
     # ---- Rotación ----
     def _set_key(self, which, down):
@@ -238,35 +264,48 @@ class App:
         angle_display = ((self.angle + 180) % 360) - 180
         self.lbl_angle.configure(text=f"Pitch = {int(round(90-angle_display))}°")
 
-        
-
-    def rotate_and_update(self, delta_deg):
+    def rotate_and_update_from_keyboard(self, delta_deg):
         self.angle = (self.angle + delta_deg) % 360.0
-        rotated = self.base.rotate(-self.angle, resample=Image.Resampling.BICUBIC, expand=False)
+        rotated = self.base.rotate(-self.angle,  expand=False)
+        self._update_label_img_pitch_with(rotated)
+
+    def rotate_and_update_from_autopilot(self, pitch):
+        self.angle = 90-pitch
+        rotated = self.base.rotate(-self.angle, expand=False)
         self._update_label_img_pitch_with(rotated)
     
     def update_empuje(self, delta_empuje):
         self.porcentaje_empuje = self.porcentaje_empuje + delta_empuje
-        if self.porcentaje_empuje + delta_empuje>100:
+        if self.porcentaje_empuje + delta_empuje > 100:
             self.porcentaje_empuje = 100
         elif self.porcentaje_empuje + delta_empuje<0:
             self.porcentaje_empuje = 0
 
         self.lbl_porcentaje_empuje.configure(text=f"Empuje = {self.porcentaje_empuje}%")    
            
-
     def tick(self):
         # Rotación
         delta = 0
         delta_empuje = 0
         
-        if self.left_down:  
-            delta -= ROT_STEP_DEG
-        if self.right_down: 
-            delta += ROT_STEP_DEG
-        if delta != 0:
-            self.rotate_and_update(delta)
+        # CONTROL DE VEHICULO (PITCH)
+        if(self.control_piloto_automatico == False):
+            if self.left_down:  
+                delta -= ROT_STEP_DEG
+            if self.right_down: 
+                delta += ROT_STEP_DEG
+            if delta != 0:
+                self.rotate_and_update_from_keyboard(delta)
+                self.pitch = 90 - (((self.angle + 180) % 360) - 180)
+                #print(f"Pitch desde teclado {self.elapsed:.2f} s = {self.pitch:.2f}º")
+        else:#Esto peta el programa
+            self.elapsed_ticks = self.elapsed_ticks + 1
+            if(self.elapsed_ticks>10):
+                self.pitch = self.mi_pilot_automatico.pitch_at(self.elapsed)
+                self.rotate_and_update_from_autopilot(self.pitch)
+                self.elapsed_ticks = 0
 
+        # CONTROL DE VEHICULO (EMPUJE)
         if self.up_down:  
             delta_empuje += EMP_STEP_PER
         if self.down_down: 
@@ -282,8 +321,8 @@ class App:
         # Cronómetro
         if self.running and self.start_time is not None:
             # Actualiza tiempo
-            elapsed = self.elapsed_before + (time.time() - self.start_time)
-            self.lbl_time.configure(text=f"Tiempo: {int(elapsed)} s")
+            self.elapsed = self.elapsed_before + (time.time() - self.start_time)
+            self.lbl_time.configure(text=f"Tiempo: {int(self.elapsed)} s")
 
             self.actualizar_escenario_y_gui()
 
@@ -295,9 +334,10 @@ class App:
 
     def actualizar_escenario_y_gui(self):
         # Acutaliza escenario.
-        pitch =math.radians( 90 - (((self.angle + 180) % 360) - 180))
+        
         try:
-            out = self.mi_escenario.update(pitch,self.porcentaje_empuje,TICK_MS/1000)
+            #print(f"Pitch at {self.elapsed:.2f} s = {self.pitch:.2f}º")
+            out = self.mi_escenario.update(math.radians(self.pitch),self.porcentaje_empuje,TICK_MS/1000)
             self.altitud = out["altitud"]
             self.distancia = out["distancia"]
             masa = out["m"]

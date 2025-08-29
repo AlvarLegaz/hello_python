@@ -36,12 +36,13 @@ class Vehiculo:
         Vz = max(0.0, float(estado["Vz"]))
         Vx = max(0.0, float(estado["Vx"]))
         V = math.sqrt(Vx**2 + Vz**2)
+        dt = float(estado["dt"])
 
         # Empuje (con corrección por presión ambiente implementada en fa.empuje)
-        T = fa.empuje(self.empuje_vacio, self.empuje_nivel_mar, self.tiempo_quemado, thr, h, t)
+        T = fa.empuje(self.empuje_vacio, self.empuje_nivel_mar, self.tiempo_quemado, thr, self.m_prop,h)
       
         # Peso y masa
-        m = max(self.masa_instantanea(t, porcentaje_empuje), 1e-9)  # evita división por cero
+        m = max(self.masa_instantanea(dt, porcentaje_empuje), 1e-9)  # evita división por cero
         W= fa.peso(h, m)
 
         # Arrastre (con corrección por presión ambiente implementada en fa.empuje)
@@ -62,16 +63,19 @@ class Vehiculo:
     # ------------------------------------------------------------
     # Masa instantánea (consumo lineal medio)
     # ------------------------------------------------------------
-    def masa_instantanea(self, t: float, porcentaje_empuje) -> float:
+    def masa_instantanea(self, dt: float, porcentaje_empuje) -> float:
         """
         veh: dict con claves:
             'm_seco' [kg], 'm_prop' [kg], 'tiempo_quemado' [s]
         """
-        t = max(0.0, float(t))
+       
         tburn   = self.tiempo_quemado
-        mdot    = (self.m_prop_max / tburn) if tburn > 0.0 else 0.0
-        self.m_prop  = max(self.m_prop_max - mdot * t, 0.0)
+        mdot    = (porcentaje_empuje/100)*(self.m_prop_max / tburn) 
+        self.m_prop  = max(self.m_prop - mdot * dt, 0.0)
+        #print(f"Tiempo quemado at {tburn:.2f} dt = {dt:.2f}º")
         return self.m_seco + self.m_prop
     
     def porcentaje_combustible(self):
+        #print(f"Porcentaje quemado {(self.m_prop/self.m_prop_max)*100:.2f}")
         return (self.m_prop/self.m_prop_max)*100
+        

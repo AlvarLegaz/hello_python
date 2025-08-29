@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt  # <-- para la gráfica
 from datos_vehiculos import VEHICULOS
 
 class Escenario:
-    def __init__(self, nombre_vehiculo="testV"):
+    def __init__(self, nombre_vehiculo="falcon9"):
         self.veh = VEHICULOS[nombre_vehiculo]  # carga el diccionario del vehículo elegido
 
         # -------------------------------
@@ -58,7 +58,7 @@ class Escenario:
     
     def update(self, pitch, porcentaje_empuje, dt):
 
-        estado = {"t": self.t, "altitud": self.h, "Vz": self.vx, "Vx": self.vz}
+        estado = {"t": self.t, "altitud": self.h, "Vz": self.vx, "Vx": self.vz, "dt":dt}
         pitch = pitch
 
         # Fuerzas/aceleraciones en estado actual

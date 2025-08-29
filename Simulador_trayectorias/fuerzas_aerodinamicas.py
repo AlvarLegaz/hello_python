@@ -15,13 +15,14 @@ H = 7200.0 # escala atmósfera [m]
 p0 = 101325.0 # presión al nivel del mar [Pa]
 
 
-def empuje(empuje_vacio, empuje_nivel_mar, tiempo_quemado, procentaje_empuje, altitud, tiempo_vuelo):
+def empuje(empuje_vacio, empuje_nivel_mar, tiempo_quemado, procentaje_empuje, masa_propelente, altitud):
     empuje_nivel_mar_actual = (procentaje_empuje/100)*empuje_nivel_mar
     #Ae = (empuje_vacio - empuje_nivel_mar)/p0
-    if tiempo_vuelo < tiempo_quemado:
+    if masa_propelente > 0.0:
         return empuje_nivel_mar_actual
     else:
         return 0
+
 
 
 def arrastre_x(altitud, vx, V, area_efectiva):
