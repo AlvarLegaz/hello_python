@@ -42,8 +42,8 @@ class App:
         rightbar.pack_propagate(False)
 
         # ---- Widgets contenido ----
-        self.lbl = tk.Label(content, bg="white")
-        self.lbl.pack(expand=True)
+        self.lbl_img_pitch = tk.Label(content, bg="white")
+        self.lbl_img_pitch.pack(expand=True)
 
         self.lbl_angle = tk.Label(content, text="Pitch = 90°", font=("Arial", 14), bg="white")
         self.lbl_angle.pack(side=tk.LEFT, padx=10)
@@ -135,7 +135,7 @@ class App:
         )
 
         self.angle = 0.0
-        self._update_label_with(self.base)
+        self._update_label_img_pitch_with(self.base)
 
         # Cronómetro
         self.start_time = None
@@ -198,11 +198,11 @@ class App:
         elif which == 'c':
             self.c_down = down
 
-    def _update_label_with(self, pil_img):
+    def _update_label_img_pitch_with(self, pil_img):
         resized = pil_img.resize((IMG_SIZE, IMG_SIZE), Image.Resampling.BICUBIC)
         self.tk_img = ImageTk.PhotoImage(resized)
-        self.lbl.configure(image=self.tk_img)
-        self.lbl.image = self.tk_img
+        self.lbl_img_pitch.configure(image=self.tk_img)
+        self.lbl_img_pitch.image = self.tk_img
 
         angle_display = ((self.angle + 180) % 360) - 180
         self.lbl_angle.configure(text=f"Pitch = {int(round(90-angle_display))}°")
@@ -212,7 +212,7 @@ class App:
     def rotate_and_update(self, delta_deg):
         self.angle = (self.angle + delta_deg) % 360.0
         rotated = self.base.rotate(-self.angle, resample=Image.Resampling.BICUBIC, expand=False)
-        self._update_label_with(rotated)
+        self._update_label_img_pitch_with(rotated)
     
     def update_empuje(self, delta_empuje):
         self.porcentaje_empuje = self.porcentaje_empuje + delta_empuje
@@ -221,7 +221,7 @@ class App:
         elif self.porcentaje_empuje + delta_empuje<0:
             self.porcentaje_empuje = 0
 
-        self.lbl_porcentaje_empuje.configure(text=f"Porcentaje Empuje = {self.porcentaje_empuje}%")    
+        self.lbl_porcentaje_empuje.configure(text=f"Empuje = {self.porcentaje_empuje}%")    
            
 
     def tick(self):
