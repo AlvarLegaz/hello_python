@@ -20,7 +20,7 @@ class App:
         # Poscion inicial
         self.altitud = 0
         self.distancia = 0
-        self.elapsed = 0
+        self.time = 0
         self.elapsed_ticks = 0
 
         # Controles iniciales
@@ -30,14 +30,14 @@ class App:
 
         self.root = root
         self.root.title("Simulador Aeroespacial Simple")
-        self.root.geometry("1250x750")  # más alto para footer
+        self.root.geometry("1400x750")  # más alto para footer
 
         # ----- Layout principal: lateral izq + contenido + lateral dcha -----
         main = tk.Frame(root, bg="black")
         main.pack(expand=True, fill="both")
 
         # Lateral izquierdo (configuración)
-        leftbar = tk.Frame(main, bg="#232323", width=220)
+        leftbar = tk.Frame(main, bg="#232323", width=300)
         leftbar.pack(side="left", fill="y")
         leftbar.pack_propagate(False)
 
@@ -46,7 +46,7 @@ class App:
         content.pack(side="left", expand=True, fill="y")
 
         # Lateral derecho (telemetría)
-        rightbar = tk.Frame(main, bg="#1e1e1e", width=220)
+        rightbar = tk.Frame(main, bg="#1e1e1e", width=300)
         rightbar.pack(side="right", fill="y")
         rightbar.pack_propagate(False)
 
@@ -102,12 +102,15 @@ class App:
         tk.Label(leftbar, text="Fuerzas", font=("Arial", 16, "bold"),
                  fg="white", bg="#232323").pack(pady=(20, 10))
         self.T_var   = tk.StringVar(value="0 N")
-        self.D_var   = tk.StringVar(value="0 N")
         self.W_var  = tk.StringVar(value="0 N")
+        self.T_W_var   = tk.StringVar(value="0 N")
+        
 
         self._make_row(leftbar, "Empuje:", self.T_var)
-        self._make_row(leftbar, "Arrastre:", self.D_var)
         self._make_row(leftbar, "Peso:", self.W_var)
+        self._make_row(leftbar, "E/W:", self.T_W_var)
+        
+        
 
         # ---- Widgets lateral derecho ----
         tk.Label(rightbar, text="Telemetría", font=("Arial", 16, "bold"),
@@ -145,7 +148,7 @@ class App:
 
         btn_datos_vuelo = tk.Button(footer, text="Datos vuelo actual", font=("Arial", 12, "bold"),
                              command=self.mostrar_datos_vuelo, bg="red", fg="white", width=20)
-        btn_datos_vuelo.pack(side="left", padx=10, pady=10)
+        btn_datos_vuelo.pack(side="right", padx=10, pady=10)
 
          # Variable interna para el Checkbutton
         self._var_piloto = tk.BooleanVar(value=False)
@@ -280,7 +283,6 @@ class App:
             self.porcentaje_empuje = 100
         elif self.porcentaje_empuje + delta_empuje<0:
             self.porcentaje_empuje = 0
-
         self.lbl_porcentaje_empuje.configure(text=f"Empuje = {self.porcentaje_empuje}%")    
            
     def tick(self):
@@ -301,34 +303,35 @@ class App:
         else:#Esto peta el programa
             self.elapsed_ticks = self.elapsed_ticks + 1
             if(self.elapsed_ticks>10):
-                self.pitch = self.mi_pilot_automatico.pitch_at(self.elapsed)
+                self.pitch = self.mi_pilot_automatico.pitch_en(self.time)
                 self.rotate_and_update_from_autopilot(self.pitch)
                 self.elapsed_ticks = 0
 
         # CONTROL DE VEHICULO (EMPUJE)
-        if self.up_down:  
-            delta_empuje += EMP_STEP_PER
-        if self.down_down: 
-            delta_empuje -= EMP_STEP_PER
-        if self.c_down:
-            delta_empuje = -100
-        if self.x_down:
-            delta_empuje = 100
-        if delta_empuje != 0:
-            self.update_empuje(delta_empuje)
-    
+        if(self.control_piloto_automatico == False):
+            if self.up_down:  
+                delta_empuje += EMP_STEP_PER
+            if self.down_down: 
+                delta_empuje -= EMP_STEP_PER
+            if self.c_down:
+                delta_empuje = -100
+            if self.x_down:
+                delta_empuje = 100
+            if delta_empuje != 0:
+                self.update_empuje(delta_empuje)
+        else:
+            self.porcentaje_empuje = self.mi_pilot_automatico.empuje_en(self.time)
+            self.lbl_porcentaje_empuje.configure(text=f"Empuje = {self.porcentaje_empuje}%")    
 
         # Cronómetro
         if self.running and self.start_time is not None:
             # Actualiza tiempo
-            self.elapsed = self.elapsed_before + (time.time() - self.start_time)
-            self.lbl_time.configure(text=f"Tiempo: {int(self.elapsed)} s")
-
+            self.lbl_time.configure(text=f"Tiempo: {int(self.time)} s")
             self.actualizar_escenario_y_gui()
 
         elif not self.running:
             # mostrar acumulado
-            self.lbl_time.configure(text=f"Tiempo: {int(self.elapsed_before)} s")
+            self.lbl_time.configure(text=f"Tiempo: {int(self.time)} s")
 
         self.root.after(TICK_MS, self.tick)
 
@@ -340,6 +343,7 @@ class App:
             out = self.mi_escenario.update(math.radians(self.pitch),self.porcentaje_empuje,TICK_MS/1000)
             self.altitud = out["altitud"]
             self.distancia = out["distancia"]
+            self.time = out["tiempo"]
             masa = out["m"]
             velocidad_z = out["vz"]
             velocidad_x = out["vx"]
@@ -349,7 +353,7 @@ class App:
             arrastre = out["Dz"]
             peso = out["W"]
             fuel_var = out["nivel_combustible"]
-
+            
             # Actualiza telemetría
             self.alt_var.set(f"{self.altitud/1000:.3f} km")  
             self.dist_var.set(f"{self.distancia/1000:.3f} km") 
@@ -362,8 +366,8 @@ class App:
             self.mass_var.set(f"{masa:.1f} kg") 
             self.fuel_var.set(f"{fuel_var:.1f} %")
             self.T_var.set(f"{empuje:.1f} N") 
-            self.D_var.set(f"{arrastre:.1f} N")
             self.W_var.set(f"{peso:.1f} N")
+            self.T_W_var.set(f"{empuje/peso:.1f} N")
 
         except RuntimeError as e:
             self.mostrar_datos_vuelo()

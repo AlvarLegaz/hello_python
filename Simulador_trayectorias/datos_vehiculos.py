@@ -10,7 +10,7 @@ VEHICULOS = {
         "tiempo_quemado": 90.0            # s
     },
     "falcon9": {
-        "m_seco": 22_200.0,               # kg (masa en seco primera etapa)
+        "m_seco": 100_200.0,               # kg (masa en seco primera etapa)
         "m_prop": 411_000.0,              # kg (propelente RP-1/LOX)
         "Aref": math.pi * (3.66/2)**2,    # m^2 (diámetro = 3.66 m)
         "empuje_vacio": 7_607_000.0,      # N (9 Merlin 1D en vacío)

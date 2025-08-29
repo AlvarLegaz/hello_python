@@ -4,8 +4,8 @@ import numpy as np
 
 class PilotoAutomatico:
     # Keyframes (tiempo en s, pitch en grados)
-    key_times = np.array([0.0, 12.0, 70.0, 150.0, 520.0])
-    key_pitch = np.array([90.0, 88.0, 80.0, 50.0, 5.0])
+    key_times = np.array([0.0, 12.0, 70.0, 100.0, 120.0])
+    key_pitch = np.array([90.0, 88.0, 80.0, 30.0, 30.0])
 
     @staticmethod
     def _S(x: float) -> float:
@@ -13,7 +13,7 @@ class PilotoAutomatico:
         return 10*x**3 - 15*x**4 + 6*x**5
 
     @classmethod
-    def pitch_at(cls, time: float) -> float:
+    def pitch_en(cls, time: float) -> float:
         """
         Devuelve el ángulo de pitch (grados) en un instante temporal dado.
 
@@ -42,8 +42,20 @@ class PilotoAutomatico:
         # Fallback (no debería alcanzarse)
         return float(cls.key_pitch[-1])
 
+    def empuje_en(cls, time: float) -> float:
+        if time < 80:
+            return 85
+        elif time < 110:
+            return 90
+        else:
+            return 95
+
     # --- Compatibilidad con la firma antigua (altitud ignorada) ---
     @classmethod
-    def pitch_profile(cls, time: float, altitude: float = 0.0) -> float:
+    def perfil_pitch(cls, time: float, altitude: float = 0.0) -> float:
         """Compatibilidad retro: delega en pitch_at(time)."""
-        return cls.pitch_at(time)
+        return cls.pitch_en(time)
+    
+    def perfil_empuje(cls, time: float, altitude: float = 0.0) -> float:
+        """Compatibilidad retro: delega en pitch_at(time)."""
+        return cls.empuje_en(time)
