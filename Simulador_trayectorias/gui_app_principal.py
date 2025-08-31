@@ -357,8 +357,8 @@ class App:
             # Actualiza telemetría
             self.alt_var.set(f"{self.altitud/1000:.3f} km")  
             self.dist_var.set(f"{self.distancia/1000:.3f} km") 
-            self.vz_var.set(f"{3.6*velocidad_z:.1f} km/s") 
-            self.vx_var.set(f"{3.6*velocidad_x:.1f} km/s") 
+            self.vz_var.set(f"{3.6*velocidad_z:.1f} km/h") 
+            self.vx_var.set(f"{3.6*velocidad_x:.1f} km/h") 
             self.az_var.set(f"{aceleracion_z:.1f} m/s2") 
             self.ax_var.set(f"{aceleracion_x:.1f} m/s2") 
 
@@ -372,7 +372,8 @@ class App:
         except RuntimeError as e:
             self.mostrar_datos_vuelo()
             self.reset_timer()
-            messagebox.showinfo("Vuelo terminado", "El vuelo ha finalizado por impacto con el suelo.")
+            messagebox.showinfo("Vuelo terminado", f"El vuelo ha finalizado por impacto con el suelo.\n{str(e)}"
+    )
     
     def mostrar_datos_vuelo(self):
         dvgui.mostrar_datos_trayectoria(self.mi_escenario.obtener_datos_vuelo())

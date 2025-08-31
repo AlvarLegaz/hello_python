@@ -25,40 +25,49 @@ class Vehiculo:
     # Control del vehículo a trevés de pitch y procentaje_empuje
     # Posicion actual
     # ------------------------------------------------------------
-    def dinamica_vehiculo(self, pitch: float, porcentaje_empuje: float, estado: dict):
+    def actualizar_dinamica(self, pitch: float, porcentaje_empuje: float, estado: dict):
         # Control del vehículo con ángulo de trayectoria (≈ actitud) y porcentaje empuje
         thr =  max(0.0, float(porcentaje_empuje))
-        gamma = float(pitch)
 
         # Estado actual
-        t = float(estado["t"])
-        h = max(0.0, float(estado["altitud"]))
-        Vz = max(0.0, float(estado["Vz"]))
-        Vx = max(0.0, float(estado["Vx"]))
-        V = math.sqrt(Vx**2 + Vz**2)
-        dt = float(estado["dt"])
+        t_actual = float(estado["t"])
+        xx_actual = float(estado["distancia"])
+        h_actual = ( float(estado["altitud"]))
+        vz_actual = (float(estado["vz"]))
+        vx_actual = (float(estado["vx"]))
+        v_actual = math.sqrt(vx_actual**2 + vz_actual**2)
+        dt_actual = float(estado["dt"])
 
         # Empuje (con corrección por presión ambiente implementada en fa.empuje)
-        T = fa.empuje(self.empuje_vacio, self.empuje_nivel_mar, self.tiempo_quemado, thr, self.m_prop,h)
-      
+        T = fa.empuje(self.empuje_vacio, self.empuje_nivel_mar, self.tiempo_quemado, thr, self.m_prop,h_actual)
         # Peso y masa
-        m = max(self.masa_instantanea(dt, porcentaje_empuje), 1e-9)  # evita división por cero
-        W= fa.peso(h, m)
+        m = max(self.masa_instantanea(dt_actual, porcentaje_empuje), 1e-9)  # evita división por cero
+        W= fa.peso(h_actual, m)
 
         # Arrastre (con corrección por presión ambiente implementada en fa.empuje)
-        if V > 1e-9:
-            invV = 1.0 / V
-            Dx = fa.arrastre_x(h, Vx, V, self.area_efectiva)
-            Dz = fa.arrastre_z(h, Vz, V, self.area_efectiva)
+        if v_actual > 1e-9:
+            Dx = fa.arrastre_x(h_actual, vx_actual, v_actual, self.area_efectiva)
+            Dz = fa.arrastre_z(h_actual, vz_actual, v_actual, self.area_efectiva)
         else:
             Dx = 0.0
             Dz = 0.0
 
         # Ecuaciones de movimiento (traslación)
-        ax = (T * math.cos(gamma) - Dx) / m
-        az = (T * math.sin(gamma) - Dz - W) / m
+        ax = (T * math.cos(pitch) - Dx) / m
+        az = (T * math.sin(pitch) - Dz - W) / m
+        
+        vx = vx_actual + ax * dt_actual
+        vz = vz_actual + az * dt_actual
+        xx = xx_actual + vx * dt_actual
+        hh  = h_actual  + vz * dt_actual
+        tt  = t_actual  + dt_actual
+        v = math.sqrt(vx**2 + vz**2)
+        angulo_trayectoria = math.degrees(math.atan2(vx, vz))
 
-        return {"ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "gamma": gamma}
+        if(h_actual == 0 and hh < 0):
+            hh = h_actual
+        
+        return {"tiempo":tt, "distancia":xx, "altitud":hh, "v":v, "vx":vx, "vz":vz, "angulo_trayectoria":angulo_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m}
 
     # ------------------------------------------------------------
     # Masa instantánea (consumo lineal medio)
@@ -75,7 +84,7 @@ class Vehiculo:
         #print(f"Tiempo quemado at {tburn:.2f} dt = {dt:.2f}º")
         return self.m_seco + self.m_prop
     
-    def porcentaje_combustible(self):
+    def get_porcentaje_combustible(self):
         #print(f"Porcentaje quemado {(self.m_prop/self.m_prop_max)*100:.2f}")
         return (self.m_prop/self.m_prop_max)*100
         

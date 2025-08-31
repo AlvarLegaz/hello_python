@@ -27,7 +27,7 @@ class Escenario:
         Vz = 0.0           # m/s (reposo)
 
         self.t = t0
-        self.h = h0
+        self.hh = h0
         self.xx = x0
         self.vx = Vx
         self.vz = Vz
@@ -47,7 +47,7 @@ class Escenario:
         Vz = 0.0           # m/s (reposo)
 
         self.t = t0
-        self.h = h0
+        self.hh = h0
         self.xx = x0
         self.vx = Vx
         self.vz = Vz
@@ -58,11 +58,18 @@ class Escenario:
     
     def update(self, pitch, porcentaje_empuje, dt):
 
-        estado = {"t": self.t, "altitud": self.h, "Vz": self.vx, "Vx": self.vz, "dt":dt}
-        pitch = pitch
+        estado = {"t": self.t, "dt":dt, "altitud": self.hh, "distancia":self.xx, "vz": self.vz, "vx": self.vx}
+        h_actual = self.hh
 
         # Fuerzas/aceleraciones en estado actual
-        out = self.vehiculo.dinamica_vehiculo(pitch, porcentaje_empuje, estado)
+        out = self.vehiculo.actualizar_dinamica(pitch, porcentaje_empuje, estado)
+        self.t = out["tiempo"]
+        self.hh = out["altitud"]
+        self.xx = out["distancia"]
+        self.vx = out["vx"]
+        self.vz = out["vz"]
+        v = out["v"]
+        angulo_trayectoria = out["angulo_trayectoria"]
         ax = out["ax"]
         az = out["az"]
         T  = out["T"]
@@ -71,38 +78,22 @@ class Escenario:
         W = out["W"]
         m = out["m"]
 
-        # Predicción (semi-implícito en posición para algo más de estabilidad)
-        vx_next = self.vx + ax * dt
-        vz_next = self.vz + az * dt
-        xx_next = self.xx + vx_next * dt
-        h_next  = self.h  + vz_next * dt
-        t_next  = self.t  + dt
+        # Nivel combustible
+        fuel_var = self.vehiculo.get_porcentaje_combustible()
 
         # -----------------------------
         # Eventos dentro del paso
         # -----------------------------
-        # 1) Pasado en el suelo sin empuje
-        if self.h == 0 and h_next <= 0.0:
+        # 1) Posado en el suelo sin empuje
+        if h_actual > 0.0 and self.hh <= 0.0:
             V  = math.hypot(self.vx, self.vz)
-        # 2) Impacto con suelo: cruza h=0 del lado positivo
-        elif self.h > 0.0 and h_next <= 0.0:
-            V  = math.hypot(self.vx, self.vz)
-            qi = fa.q(self.h, V)
+            qi = fa.q(self.hh, V)
             print(f"Impacto con el suelo en t={self.t:.2f} s")
             raise RuntimeError(f"Impacto con el suelo en t={self.t:.2f} s, V={V:.2f} m/s, q={qi:.2f} Pa")
-        else:
-            self.vx = vx_next
-            self.vz = vz_next
-            self.xx = xx_next
-            self.h = h_next
-            self.t = t_next 
-        
-        # Nivel combustible
-        fuel_var = self.vehiculo.porcentaje_combustible()
 
-        self.historia.append({"tiempo":self.t, "altitud":self.h, "distancia":self.xx, "vx":self.vx, "vz":self.vz, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var})
+        self.historia.append({"tiempo":self.t, "altitud":self.hh, "distancia":self.xx, "v":v, "vx":self.vx, "vz":self.vz, "angulo_trayectoria":angulo_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var})
         
-        return {"tiempo":self.t, "altitud":self.h, "distancia":self.xx, "vx":self.vx, "vz":self.vz, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var}
+        return {"tiempo":self.t, "altitud":self.hh, "distancia":self.xx, "v":v, "vx":self.vx, "vz":self.vz, "angulo_trayectoria":angulo_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var}
     
     def obtener_datos_vuelo(self):
         return self.historia
