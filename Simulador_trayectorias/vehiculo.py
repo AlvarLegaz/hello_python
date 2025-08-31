@@ -62,12 +62,12 @@ class Vehiculo:
         hh  = h_actual  + vz * dt_actual
         tt  = t_actual  + dt_actual
         v = math.sqrt(vx**2 + vz**2)
-        angulo_trayectoria = math.degrees(math.atan2(vx, vz))
+        angulo_elevacion_trayectoria = math.degrees(math.atan2(vx, vz))
 
         if(h_actual == 0 and hh < 0):
             hh = h_actual
         
-        return {"tiempo":tt, "distancia":xx, "altitud":hh, "v":v, "vx":vx, "vz":vz, "angulo_trayectoria":angulo_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m}
+        return {"tiempo":tt, "distancia":xx, "altitud":hh, "v":v, "vx":vx, "vz":vz, "angulo_elevacion_trayectoria":angulo_elevacion_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m}
 
     # ------------------------------------------------------------
     # Masa instantánea (consumo lineal medio)

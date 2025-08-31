@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+import tkintermapview as tkm
 from PIL import Image, ImageTk, ImageOps, Image
 import time, math
 import escenario as esc
@@ -20,8 +21,12 @@ class App:
         # Poscion inicial
         self.altitud = 0
         self.distancia = 0
+        self.trayectoria_azimut = 90 #Ángulo en el plano horizontal. (90 corresponde a este)
+        self.trayectoria_elevacion = 0 #Ángulo en el plano vertical.
         self.time = 0
         self.elapsed_ticks = 0
+        self.pos_vehiculo_gps_lat = 37.1050
+        self.pos_vehiculo_gps_lon = -6.7300
 
         # Controles iniciales
         self.porcentaje_empuje = 100
@@ -29,8 +34,8 @@ class App:
         self.control_piloto_automatico = False
 
         self.root = root
-        self.root.title("Simulador Aeroespacial Simple")
-        self.root.geometry("1400x750")  # más alto para footer
+        self.root.title("Simple Simulador Aeroespacial de Código Abierto SSACA v0.1")
+        self.root.geometry("1500x900")  # más alto para footer
 
         # ----- Layout principal: lateral izq + contenido + lateral dcha -----
         main = tk.Frame(root, bg="black")
@@ -43,7 +48,7 @@ class App:
 
         # Contenido central
         content = tk.Frame(main, bg="black")
-        content.pack(side="left", expand=True, fill="y")
+        content.pack(side="left", expand=True, fill="both")  # <-- fill="both"
 
         # Lateral derecho (telemetría)
         rightbar = tk.Frame(main, bg="#1e1e1e", width=300)
@@ -52,11 +57,20 @@ class App:
 
         # ---- Widgets contenido (IMAGENES CENTRALES)----
 
-        self.lbl_img_mapa = tk.Label(content, bg="black")
-        self.lbl_img_mapa.grid(row=0, column=0, columnspan=3, sticky="nsew")  # ocupa 2 columnas
+        # ----- Mapa vehículo (sustituye el mockup) -----
+        self.map = tkm.TkinterMapView(content, width=900, height=540)
+        self.map.set_tile_server("https://a.tile.openstreetmap.org/{z}/{x}/{y}.png")
+        self.map.set_position(self.pos_vehiculo_gps_lat, self.pos_vehiculo_gps_lon)
+        self.marker = self.map.set_marker(37.1050, -6.7300, text="Vehículo")
+        self.actualizar_posicion_gps(self.pos_vehiculo_gps_lat, self.pos_vehiculo_gps_lon, self.altitud)
+        self.map.set_zoom(5)
+        
+        # Colocarlo en la misma celda donde antes iba lbl_img_mapa
+        self.map.grid(row=0, column=0, columnspan=3, sticky="nsew")
 
+        # ----- Labels de pitch y brujula-----
         self.lbl_img_pitch = tk.Label(content, bg="black")
-        self.lbl_img_pitch.grid(row=1, column=0,  sticky="nsew")
+        self.lbl_img_pitch.grid(row=1, column=0, sticky="nsew")
 
         self.lbl_img_brujula = tk.Label(content, bg="black")
         self.lbl_img_brujula.grid(row=1, column=2, sticky="nsew")
@@ -72,17 +86,21 @@ class App:
         self.lbl_time.grid(row=2, column=2, sticky="nsew")
 
         # Configurar rejilla para que cada celda tenga tamaño fijo
-        content.grid_rowconfigure(0, minsize=400)  # fila mapa
-        content.grid_rowconfigure(1, minsize=200)  # fila brújula y extra
-        content.grid_rowconfigure(2, minsize=50)    # fila de labels de texto
+        # Fila 0 = mapa → ocupa todo lo posible
+        content.grid_rowconfigure(0, weight=3, minsize=400)
+        # Fila 1 = brújula/extra → crece pero menos
+        content.grid_rowconfigure(1, weight=1, minsize=200)
+        # Fila 2 = labels → fija, casi no crece
+        content.grid_rowconfigure(2, weight=0, minsize=50)
 
-        content.grid_columnconfigure(0, minsize=50)
-        content.grid_columnconfigure(1, minsize=50)
-        content.grid_columnconfigure(2, minsize=50)
+        # Columnas: que las 3 se repartan el espacio horizontal
+        content.grid_columnconfigure(0, weight=1, minsize=50)
+        content.grid_columnconfigure(1, weight=1, minsize=50)
+        content.grid_columnconfigure(2, weight=1, minsize=50)
 
         
         self.img_mapa = self.cargar_imagen("mapa.png",800,400)
-        self.lbl_img_mapa.config(image=self.img_mapa)
+        #self.lbl_img_mapa.config(image=self.img_mapa)
 
         self.img_brujula = self.cargar_imagen("brujula.png")
         self.lbl_img_brujula.config(image=self.img_brujula)
@@ -110,8 +128,6 @@ class App:
         self._make_row(leftbar, "Peso:", self.W_var)
         self._make_row(leftbar, "E/W:", self.T_W_var)
         
-        
-
         # ---- Widgets lateral derecho ----
         tk.Label(rightbar, text="Telemetría", font=("Arial", 16, "bold"),
                  fg="white", bg="#1e1e1e").pack(pady=(20, 10))
@@ -161,7 +177,6 @@ class App:
             command=self._actualizar_estado  # se ejecuta al marcar/desmarcar
         )
         self.chk.pack()
-
 
         # ---- Estado ----
         self.left_down = False
@@ -220,6 +235,36 @@ class App:
         tk.Label(row, textvariable=var, font=("Arial", 13, "bold"), fg="white", bg=bg).pack(side="right")
         row.pack(fill="x", padx=16, pady=6)
 
+    def actualizar_posicion_gps(self, lat, lon, alt=None):
+        if self.marker:
+            # Mueve marcador existente
+            self.marker.set_position(lat, lon)
+            if alt is not None:
+                self.marker.set_text(f"Vehículo\nAlt: {alt/1000.0:.3f}Km")
+        else:
+            # Si no existe aún, lo crea
+            text = f"Vehículo\nAlt: {alt} m" if alt else "Vehículo"
+            self.marker = self.map.set_marker(lat, lon, text=text)
+    
+     # Calcula poscion gps con azimut y distancia
+    def destination_point(self, lat, lon, azimut_deg, distancia_m):
+        # normaliza azimut a [0, 360)
+        azimut_deg = float(azimut_deg) % 360.0
+        distancia_m = float(distancia_m)
+
+        azimut_rad = math.radians(azimut_deg)
+        delta = distancia_m / 6371000.0  # distancia angular en rad
+        lat1_rad, lon1_rad = map(math.radians, [lat, lon])
+
+        lat2_rad = math.asin(math.sin(lat1_rad)*math.cos(delta) +
+                            math.cos(lat1_rad)*math.sin(delta)*math.cos(azimut_rad))
+        lon2_rad = lon1_rad + math.atan2(math.sin(azimut_rad)*math.sin(delta)*math.cos(lat1_rad),
+                                        math.cos(delta) - math.sin(lat1_rad)*math.sin(lat2_rad))
+
+        lat2 = math.degrees(lat2_rad)
+        lon2 = (math.degrees(lon2_rad) + 540) % 360 - 180  # normaliza lon [-180,180)
+        return lat2, lon2
+
     # ---- CONTROLES DE INICIO FIN Y PILOTO AUTOMATICO ----
     def start_timer(self):
         if not self.running:
@@ -238,6 +283,12 @@ class App:
         self.elapsed_before = 0
         self.lbl_time.configure(text="Tiempo: 0 s")
         self.mi_escenario.reset()
+        self.trayectoria_azimut = 90 #Ángulo en el plano horizontal. (90 corresponde a este)
+        self.trayectoria_elevacion = 0 #Ángulo en el plano vertical.
+        self.time = 0
+        self.elapsed_ticks = 0
+        self.pos_vehiculo_gps_lat = 37.1050
+        self.pos_vehiculo_gps_lon = -6.7300
 
     def _actualizar_estado(self):
         """Sincroniza la variable interna con el atributo Python"""
@@ -353,6 +404,13 @@ class App:
             arrastre = out["Dz"]
             peso = out["W"]
             fuel_var = out["nivel_combustible"]
+
+            self.trayectoria_azimut = 90 #Ángulo en el plano horizontal. (90 corresponde a este)
+            self.trayectoria_elevacion = out["angulo_elevacion_trayectoria"] #Ángulo en el plano vertical.
+
+            # Actualizar posicion GPS
+            self.pos_vehiculo_gps_lat, self.pos_vehiculo_gps_lon = self.destination_point(self.pos_vehiculo_gps_lat, self.pos_vehiculo_gps_lon, self.trayectoria_azimut, (self.distancia/1000))
+            self.actualizar_posicion_gps(self.pos_vehiculo_gps_lat, self.pos_vehiculo_gps_lon, self.altitud)
             
             # Actualiza telemetría
             self.alt_var.set(f"{self.altitud/1000:.3f} km")  

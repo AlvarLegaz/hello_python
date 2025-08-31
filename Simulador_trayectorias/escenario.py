@@ -69,7 +69,7 @@ class Escenario:
         self.vx = out["vx"]
         self.vz = out["vz"]
         v = out["v"]
-        angulo_trayectoria = out["angulo_trayectoria"]
+        angulo_elevacion_trayectoria = out["angulo_elevacion_trayectoria"]
         ax = out["ax"]
         az = out["az"]
         T  = out["T"]
@@ -91,9 +91,9 @@ class Escenario:
             print(f"Impacto con el suelo en t={self.t:.2f} s")
             raise RuntimeError(f"Impacto con el suelo en t={self.t:.2f} s, V={V:.2f} m/s, q={qi:.2f} Pa")
 
-        self.historia.append({"tiempo":self.t, "altitud":self.hh, "distancia":self.xx, "v":v, "vx":self.vx, "vz":self.vz, "angulo_trayectoria":angulo_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var})
+        self.historia.append({"tiempo":self.t, "altitud":self.hh, "distancia":self.xx, "v":v, "vx":self.vx, "vz":self.vz, "angulo_elevacion_trayectoria":angulo_elevacion_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var})
         
-        return {"tiempo":self.t, "altitud":self.hh, "distancia":self.xx, "v":v, "vx":self.vx, "vz":self.vz, "angulo_trayectoria":angulo_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var}
+        return {"tiempo":self.t, "altitud":self.hh, "distancia":self.xx, "v":v, "vx":self.vx, "vz":self.vz, "angulo_elevacion_trayectoria":angulo_elevacion_trayectoria, "ax": ax, "az": az, "T": T, "Dz": Dz, "Dx": Dx, "W": W, "m": m, "pitch":pitch, "nivel_combustible":fuel_var}
     
     def obtener_datos_vuelo(self):
         return self.historia
